@@ -9,8 +9,8 @@ BRAND="BitRust Network"
 GAME="Necesse"
 VERSION="v1.0"
 MOD_DIR="$HOME/.config/Necesse/mods"
-DOWNLOAD_URL="https://github.com/enzonami/BitRust/archive/refs/heads/main.zip"
-ZIP_FILE="BitRust-main.zip"
+DOWNLOAD_URL="https://github.com/enzonami/BitRust_Network_Factions/archive/refs/heads/main.zip"
+ZIP_FILE="BitRust_Network_Factions-main.zip"
 SCRIPT="$(basename "$0")"
 
 find_steam_content() {
