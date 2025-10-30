@@ -1,9 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 rem =============================================
+rem Automatic Updates For BitRust Factions | Necesse
 rem BitRust Network - Click-to-Install Necesse Mods
-rem AUTO-DOWNLOADS & UNZIPS latest from GitHub
-rem No local mods needed
+rem AUTO-DOWNLOADS & UNZIPS from the latest Respo
 rem UPDATED: Use Net.WebClient for download to avoid hanging, .NET unzip
 rem =============================================
 set "BRAND=BitRust Network"
