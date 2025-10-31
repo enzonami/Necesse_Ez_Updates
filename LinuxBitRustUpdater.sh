@@ -1,8 +1,8 @@
 #!/bin/bash
 # =============================================
 ### Automatic Updates For BitRust Factions | Necesse
-### BitRust Network - Click-to-Install Necesse Mods
-### AUTO-DOWNLOADS & UNZIPS from the latest Repo
+### BitRust Network – Click‑to‑Install Necesse Mods
+### AUTO‑DOWNLOADS & UNZIPS from the latest Repo
 # =============================================
 
 BRAND="BitRust Network"
@@ -34,12 +34,12 @@ STEAM_STATUS="$(find_steam_content)"
 # ──────────────────────────────────────────────
 clear
 cat <<'EOF'
-__________.__  __ __________                __   
-\______   \__|/  |\______   \__ __  _______/  |_ 
- |    |  _/  \   __\       _/  |  \/  ___/\   __\
- |    |   \  ||  | |    |   \  |  /\___ \  |  |  
- |______  /__||__| |____|_  /____//____  > |__|  
-        \/                \/           \/
+__________.__ __ __________ __
+\______ \__|/ |\______ \__ __ _______/ |_
+ | | _/ \ __\ _/ | \/ ___/\ __\
+ | | \ || | | | \ | /\___ \ | |
+ |______ /__||__| |____|_ /____//____ > |__|
+        \/ \/ \/
 Crafted by Enzonami|https://discord.gg/ZF3brDDsW7
 EOF
 echo
@@ -81,8 +81,8 @@ case "$choice" in
             exit 1
         }
 
-        echo "[INFO] Unzipping archive..."
-        unzip -q "$ZIP_FILE" || {
+        echo "[INFO] Unzipping archive (overwriting existing files)..."
+        unzip -qo "$ZIP_FILE" || {
             echo "[ERROR] Unzip failed! Is 'unzip' installed?"
             read -p "Press Enter..."
             exit 1
@@ -104,14 +104,17 @@ case "$choice" in
 
         if [[ ${#JAR_FILES[@]} -eq 0 ]]; then
             echo "[ERROR] No .jar files found in $EXTRACTED_DIR!"
-            echo "[DEBUG] Top-level files:"
+            echo "[DEBUG] Top‑level files:"
             ls -la "$EXTRACTED_DIR" | head -10
             rm -rf "$EXTRACTED_DIR"
             read -p "Press Enter..."
             exit 1
         fi
 
+        # ─────── CLEAN THE MODS FOLDER FIRST ───────
+        echo "[INFO] Removing all existing mods from '$MOD_DIR'..."
         mkdir -p "$MOD_DIR"
+        rm -rf "$MOD_DIR"/* 2>/dev/null
 
         MOD_COUNT=0
         TORCH_FOUND=false
