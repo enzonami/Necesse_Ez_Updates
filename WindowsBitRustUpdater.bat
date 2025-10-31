@@ -1,34 +1,28 @@
 @echo off
 setlocal enabledelayedexpansion
 rem =============================================
-rem Automatic Updates For BitRust Factions | Necesse
-rem BitRust Network - Click-to-Install Necesse Mods
-rem AUTO-DOWNLOADS & UNZIPS from the latest Respo
-rem UPDATED: Use Net.WebClient for download to avoid hanging, .NET unzip
+rem BitRust Network - Necesse Mod Installer
+rem AUTO-DOWNLOADS & CLEAN INSTALL
+rem NO version.txt | Preserves modlist.data | Torch detection
 rem =============================================
 set "BRAND=BitRust Network"
 set "GAME=Necesse"
 set "VERSION=v1.0"
 set "MOD_DIR=%APPDATA%\Necesse\mods"
-set "SERVER_MODE=NO" 
-set "SERVER_DIR=" 
 set "DOWNLOAD_URL=https://github.com/enzonami/BitRust_Network_Factions/archive/refs/heads/main.zip"
-set "VERSION_URL=https://raw.githubusercontent.com/enzonami/BitRust_Network_Factions/main/version.txt" 
-set "ZIP_FILE=BitRust_Newtork_Factions-main.zip"
-set "SCRIPT=%~nx0"
+set "ZIP_FILE=BitRust_Network_Factions-main.zip"
 set "LOG_FILE=%~dp0mod_update.log"
 set "AUTO_MODE=NO"
 set "PS_ERROR_FILE=%~dp0ps_error.txt"
-set "USE_VERSION_CHECK=NO"  rem Set to YES once version.txt is added
 
 if /i "%~1"=="/auto" set "AUTO_MODE=YES"
 
 set "STEAM_WORKSHOP_DIR="
 if exist "%PROGRAMFILES(x86)%\Steam\steamapps\workshop\content" set "STEAM_WORKSHOP_DIR=%PROGRAMFILES(x86)%\Steam\steamapps\workshop\content"
 if exist "%PROGRAMFILES%\Steam\steamapps\workshop\content" set "STEAM_WORKSHOP_DIR=%PROGRAMFILES%\Steam\steamapps\workshop\content"
-set "NECESSE_APP_ID=1169370" 
+set "NECESSE_APP_ID=1169370"
 
-echo [%DATE% %TIME%] Script started. Auto mode: %AUTO_MODE% >> "%LOG_FILE%"
+echo [%DATE% %TIME%] Script started. Auto: %AUTO_MODE% >> "%LOG_FILE%"
 
 if "%AUTO_MODE%"=="NO" (
     cls
@@ -37,53 +31,19 @@ if "%AUTO_MODE%"=="NO" (
     pause >nul
 )
 
-if "%SERVER_MODE%"=="YES" (
-    if not defined SERVER_DIR (
-        echo [ERROR] SERVER_DIR not set! Edit the script.
-        echo [%DATE% %TIME%] Error: SERVER_DIR not set. >> "%LOG_FILE%"
-        pause
-        exit /b
-    )
-    set "MOD_DIR=%SERVER_DIR%\mods"
-)
+rem --- Create mod folder if missing ---
 if not exist "%MOD_DIR%" (
     mkdir "%MOD_DIR%" >nul 2>&1
-    echo [INFO] Created mod folder: %MOD_DIR%
-    echo [%DATE% %TIME%] Created mod folder. >> "%LOG_FILE%"
+    echo [INFO] Created mod folder: %MOD_DIR% >> "%LOG_FILE%"
 )
 
-set "LOCAL_VERSION=unknown"
-set "REMOTE_VERSION=update_needed"  rem Default to update
-if "%USE_VERSION_CHECK%"=="YES" (
-    if exist "%MOD_DIR%\version.txt" set /p LOCAL_VERSION<"%MOD_DIR%\version.txt"
-    powershell -Command "$wc = New-Object System.Net.WebClient; try { $wc.DownloadFile('%VERSION_URL%', 'remote_version.txt') } catch { Write-Output $_.Exception.Message > '%PS_ERROR_FILE%' }" >nul 2>&1
-    if errorlevel 1 (
-        echo [WARNING] Failed to download remote version. Assuming update needed.
-        type "%PS_ERROR_FILE%"
-        echo [%DATE% %TIME%] Warning: Remote version download failed. See ps_error.txt. >> "%LOG_FILE%"
-        type "%PS_ERROR_FILE%" >> "%LOG_FILE%"
-        set "REMOTE_VERSION=update_needed"
-    ) else if exist "remote_version.txt" (
-        set /p REMOTE_VERSION<"remote_version.txt"
-        del "remote_version.txt" >nul 2>&1
-    )
-    echo [INFO] Local version: !LOCAL_VERSION! Remote: !REMOTE_VERSION! >> "%LOG_FILE%"
-)
-
-if "%AUTO_MODE%"=="YES" (
-    if "!LOCAL_VERSION!"=="!REMOTE_VERSION!" (
-        echo [%DATE% %TIME%] No update needed. Exiting. >> "%LOG_FILE%"
-        exit /b
-    )
-    goto install
-)
+if "%AUTO_MODE%"=="YES" goto install
 
 :menu
 cls
 echo %BRAND% - %GAME% Mod Installer %VERSION%
 echo.
 echo Mod Folder: %MOD_DIR%
-echo Local Version: !LOCAL_VERSION! Remote: !REMOTE_VERSION!
 echo Steam Workshop: %STEAM_WORKSHOP_DIR%
 echo.
 echo [1] Install/Update Mods [2] Open Mod Folder [3] Clear Necesse Workshop [4] Exit
@@ -98,57 +58,105 @@ if errorlevel 1 goto install
 echo [INFO] Downloading latest mods from GitHub...
 powershell -Command "$wc = New-Object System.Net.WebClient; try { $wc.DownloadFile('%DOWNLOAD_URL%', '%ZIP_FILE%') } catch { Write-Output $_.Exception.Message > '%PS_ERROR_FILE%' }" >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Download failed! Check ps_error.txt.
+    echo [ERROR] Download failed! See ps_error.txt
     type "%PS_ERROR_FILE%"
-    echo [%DATE% %TIME%] Error: Download failed. >> "%LOG_FILE%"
+    echo [%DATE% %TIME%] Download failed >> "%LOG_FILE%"
     type "%PS_ERROR_FILE%" >> "%LOG_FILE%"
     if "%AUTO_MODE%"=="NO" pause
     goto menu
 )
-echo [INFO] Download complete. ZIP size: 
-dir "%ZIP_FILE%" | findstr "%ZIP_FILE%"
-echo Press any key to continue to unzip...
-pause >nul
 
-echo [INFO] Backing up old mods...
+echo [INFO] Download complete. Size:
+dir "%ZIP_FILE%" | findstr "%ZIP_FILE%"
+
+if "%AUTO_MODE%"=="NO" (
+    echo Press any key to unzip...
+    pause >nul
+)
+
+rem --- Backup current mods (including modlist.data) ---
+echo [INFO] Backing up current mods (including modlist.data)...
 if exist "%MOD_DIR%\backup" rmdir /S /Q "%MOD_DIR%\backup" >nul 2>&1
 mkdir "%MOD_DIR%\backup" >nul 2>&1
-copy /Y "%MOD_DIR%\*.*" "%MOD_DIR%\backup\" >nul 2>&1
+xcopy /Y /Q "%MOD_DIR%\*.*" "%MOD_DIR%\backup\" >nul 2>&1
 
-echo [INFO] Unzipping mods...
+rem --- Unzip new files ---
+echo [INFO] Unzipping archive...
 powershell -Command "try { Add-Type -AssemblyName System.IO.Compression.FileSystem; [IO.Compression.ZipFile]::ExtractToDirectory('%ZIP_FILE%', '.') } catch { Write-Output $_.Exception.Message > '%PS_ERROR_FILE%' }" >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Unzip failed! Check ps_error.txt.
+    echo [ERROR] Unzip failed! See ps_error.txt
     type "%PS_ERROR_FILE%"
-    echo [%DATE% %TIME%] Error: Unzip failed. >> "%LOG_FILE%"
+    echo [%DATE% %TIME%] Unzip failed >> "%LOG_FILE%"
     type "%PS_ERROR_FILE%" >> "%LOG_FILE%"
     if "%AUTO_MODE%"=="NO" pause
     goto menu
 )
 del "%ZIP_FILE%" >nul 2>&1
 
-echo [INFO] Moving mods to %MOD_DIR%...
-if exist "BitRust-main\mods\*" (
-    copy /Y "BitRust-main\mods\*.*" "%MOD_DIR%\" >nul 2>&1
-    echo [OK] Mods installed from BitRust-main/mods
+set "EXTRACTED_DIR=BitRust_Network_Factions-main"
+if not exist "%EXTRACTED_DIR%" (
+    echo [ERROR] Extracted folder '%EXTRACTED_DIR%' not found!
+    echo [DEBUG] Contents:
+    dir /b
+    echo [%DATE% %TIME%] Extracted folder missing >> "%LOG_FILE%"
+    if "%AUTO_MODE%"=="NO" pause
+    goto menu
+)
+
+rem --- Count .jar files and detect torch ---
+set "JAR_COUNT=0"
+set "TORCH_FOUND=NO"
+for %%f in ("%EXTRACTED_DIR%\*.jar") do (
+    set /a JAR_COUNT+=1
+    echo %%~nxf | findstr /i "torch" >nul && set "TORCH_FOUND=YES"
+)
+
+if %JAR_COUNT% equ 0 (
+    echo [ERROR] No .jar files found in repo!
+    echo [DEBUG] Files in %EXTRACTED_DIR%:
+    dir "%EXTRACTED_DIR%" /b
+    echo [%DATE% %TIME%] No JARs in repo >> "%LOG_FILE%"
+    rmdir /S /Q "%EXTRACTED_DIR%" >nul 2>&1
+    if "%AUTO_MODE%"=="NO" pause
+    goto menu
+)
+
+rem --- CLEAN INSTALL: Delete everything except backup ---
+echo [INFO] Performing clean install - removing ALL files in '%MOD_DIR%'...
+rmdir /S /Q "%MOD_DIR%" >nul 2>&1
+mkdir "%MOD_DIR%" >nul 2>&1
+
+rem --- Restore modlist.data from backup (if it existed) ---
+if exist "%MOD_DIR%\backup\modlist.data" (
+    copy /Y "%MOD_DIR%\backup\modlist.data" "%MOD_DIR%\modlist.data" >nul
+    echo [OK] Restored modlist.data
 ) else (
-    echo [WARNING] No mods folder in ZIP. Copying all files...
-    copy /Y "BitRust-main\*.*" "%MOD_DIR%\" >nul 2>&1
-)
-echo %REMOTE_VERSION% > "%MOD_DIR%\version.txt"
-rmdir /S /Q "BitRust-main" >nul 2>&1
-
-if "%SERVER_MODE%"=="YES" (
-    echo [INFO] Restarting Necesse Server...
-    taskkill /IM NecesseServer.exe /F >nul 2>&1 
-    start "" "%SERVER_DIR%\NecesseServer.exe" 
+    echo [INFO] No modlist.data in backup - creating empty one
+    echo. > "%MOD_DIR%\modlist.data"
 )
 
+rem --- Copy new .jar mods ---
+echo [INFO] Installing %JAR_COUNT% new .jar mod(s)...
+for %%f in ("%EXTRACTED_DIR%\*.jar") do (
+    copy /Y "%%f" "%MOD_DIR%\" >nul 2>&1
+)
+
+echo [OK] Clean install complete: %JAR_COUNT% mod(s)
+if "%TORCH_FOUND%"=="YES" (
+    echo    Checkmark torch mod installed!
+) else (
+    echo    Cross torch mod missing
+)
+
+rem --- Cleanup ---
+rmdir /S /Q "%EXTRACTED_DIR%" >nul 2>&1
+
 echo =========================================
-echo Installed latest mods! Version: !REMOTE_VERSION!
-echo Restart %GAME% to load mods!
+echo Installed latest mods!
+echo Restart %GAME% to load!
 echo =========================================
-echo [%DATE% %TIME%] Mods updated to !REMOTE_VERSION!. >> "%LOG_FILE%"
+echo [%DATE% %TIME%] Clean install: %JAR_COUNT% JARs. Torch: %TORCH_FOUND%. modlist.data: preserved. >> "%LOG_FILE%"
+
 if "%AUTO_MODE%"=="NO" pause
 goto menu
 
@@ -163,8 +171,8 @@ choice /c yn /n /m "Continue? [y/n]: "
 if errorlevel 2 goto menu
 echo [INFO] Clearing Necesse Workshop...
 rmdir /S /Q "%STEAM_WORKSHOP_DIR%\%NECESSE_APP_ID%" >nul 2>&1
-echo [OK] Necesse Workshop cleared!
-echo [%DATE% %TIME%] Workshop cleared. >> "%LOG_FILE%"
+echo [OK] Workshop cleared!
+echo [%DATE% %TIME%] Workshop cleared >> "%LOG_FILE%"
 if "%AUTO_MODE%"=="NO" pause
 goto menu
 
@@ -183,4 +191,4 @@ if "%AUTO_MODE%"=="NO" (
     pause >nul
 )
 echo [%DATE% %TIME%] Script ended. >> "%LOG_FILE%"
-exit
+exit /b
